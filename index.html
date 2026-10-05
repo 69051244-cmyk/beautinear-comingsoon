@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BeautiNear — Coming Soon</title>
+  <meta name="description" content="BeautiNear: book makeup, hair, nail and spa artists near you. Beauty near you, anywhere in Thailand. Launching 1 January 2027.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="#" class="logo">Beauti<span>Near</span></a>
+      <a href="#services" class="header-link">Try a demo booking</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">Coming soon</p>
+        <h1>Beauty near you,<br>anywhere in Thailand.</h1>
+        <p class="lead">Book trusted makeup, hair, nail and spa artists in a few taps — at their studio or right at your home.</p>
+
+        <div class="countdown" aria-label="Countdown to launch on 1 January 2027">
+          <div class="cd-unit"><span id="cd-days" class="cd-num">00</span><span class="cd-label">Days</span></div>
+          <div class="cd-unit"><span id="cd-hours" class="cd-num">00</span><span class="cd-label">Hours</span></div>
+          <div class="cd-unit"><span id="cd-mins" class="cd-num">00</span><span class="cd-label">Minutes</span></div>
+          <div class="cd-unit"><span id="cd-secs" class="cd-num">00</span><span class="cd-label">Seconds</span></div>
+        </div>
+        <p class="launch-date" id="launch-text">Launching 1 January 2027</p>
+
+        <a href="#services" class="btn btn-primary">Explore services</a>
+      </div>
+    </section>
+
+    <section id="services" class="section">
+      <div class="container">
+        <h2>Our services</h2>
+        <p class="section-sub">Tap a service to try a demo booking.</p>
+        <div class="service-grid">
+          <button class="service-card" data-service="makeup" type="button">
+            <span class="service-icon" aria-hidden="true">💄</span>
+            <h3>Makeup</h3>
+            <p>Bridal, party and everyday looks by professional makeup artists.</p>
+            <span class="service-price">From ฿1,200</span>
+          </button>
+          <button class="service-card" data-service="hair" type="button">
+            <span class="service-icon" aria-hidden="true">💇‍♀️</span>
+            <h3>Hair</h3>
+            <p>Cuts, styling, colour and treatments from skilled stylists.</p>
+            <span class="service-price">From ฿500</span>
+          </button>
+          <button class="service-card" data-service="nails" type="button">
+            <span class="service-icon" aria-hidden="true">💅</span>
+            <h3>Nails</h3>
+            <p>Manicures, pedicures, gel and nail art, done beautifully.</p>
+            <span class="service-price">From ฿350</span>
+          </button>
+          <button class="service-card" data-service="spa" type="button">
+            <span class="service-icon" aria-hidden="true">🌸</span>
+            <h3>Spa</h3>
+            <p>Thai massage, aromatherapy and facials to help you unwind.</p>
+            <span class="service-price">From ฿600</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-tint">
+      <div class="container">
+        <h2>Book with confidence</h2>
+        <div class="trust-grid">
+          <div class="trust-item">
+            <span class="trust-icon" aria-hidden="true">✔</span>
+            <h3>Verified artists</h3>
+            <p>Every artist is ID-checked and their portfolio reviewed before they can accept bookings.</p>
+          </div>
+          <div class="trust-item">
+            <span class="trust-icon" aria-hidden="true">🔒</span>
+            <h3>Secure payment</h3>
+            <p>Pay safely by card, PromptPay or mobile banking. Your payment is held until the service is done.</p>
+          </div>
+          <div class="trust-item">
+            <span class="trust-icon" aria-hidden="true">↺</span>
+            <h3>100% refund guarantee</h3>
+            <p>If your artist doesn't show up, you get a full refund — no questions asked.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p class="logo">Beauti<span>Near</span></p>
+      <p>Beauty near you, anywhere in Thailand.</p>
+      <p class="small">© 2026 BeautiNear. All rights reserved. This page is a preview; bookings are for demonstration only.</p>
+    </div>
+  </footer>
+
+  <!-- Booking modal -->
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" id="modal-close" type="button" aria-label="Close">×</button>
+      <h2 id="modal-title">Book</h2>
+      <p class="demo-note">Demo only — no real booking or payment is made.</p>
+
+      <form id="booking-form" novalidate>
+        <fieldset>
+          <legend>1. Choose an option</legend>
+          <div class="choice-list" id="option-list"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>2. Choose an artist</legend>
+          <div class="choice-list" id="artist-list"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>3. Date and time</legend>
+          <div class="row">
+            <label>Date <input type="date" id="booking-date" required></label>
+            <label>Time
+              <select id="booking-time" required>
+                <option value="">Select a time</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>4. Location</legend>
+          <div class="choice-list">
+            <label class="choice"><input type="radio" name="location" value="studio" checked><span><strong>At the studio</strong><small>No extra fee</small></span></label>
+            <label class="choice"><input type="radio" name="location" value="home"><span><strong>Home visit</strong><small>+฿300 travel fee</small></span></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>5. Payment method</legend>
+          <div class="choice-list">
+            <label class="choice"><input type="radio" name="payment" value="Credit / debit card" checked><span><strong>Credit / debit card</strong></span></label>
+            <label class="choice"><input type="radio" name="payment" value="PromptPay QR"><span><strong>PromptPay QR</strong></span></label>
+            <label class="choice"><input type="radio" name="payment" value="Mobile banking"><span><strong>Mobile banking</strong></span></label>
+          </div>
+        </fieldset>
+
+        <p class="form-error" id="form-error" role="alert"></p>
+        <button type="submit" class="btn btn-primary btn-block">Review booking</button>
+      </form>
+
+      <div id="summary" hidden>
+        <div class="confirm-badge">✔ Booking confirmed (demo)</div>
+        <dl class="summary-list" id="summary-list"></dl>
+        <div class="summary-total"><span>Total</span><span id="summary-total"></span></div>
+        <button type="button" class="btn btn-primary btn-block" id="done-btn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

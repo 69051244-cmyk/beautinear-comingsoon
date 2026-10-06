@@ -143,9 +143,51 @@
         <fieldset>
           <legend>5. Payment method</legend>
           <div class="choice-list">
-            <label class="choice"><input type="radio" name="payment" value="Credit / debit card" checked><span><strong>Credit / debit card</strong></span></label>
-            <label class="choice"><input type="radio" name="payment" value="PromptPay QR"><span><strong>PromptPay QR</strong></span></label>
-            <label class="choice"><input type="radio" name="payment" value="Mobile banking"><span><strong>Mobile banking</strong></span></label>
+            <label class="choice"><input type="radio" name="payment" value="card" checked><span><strong>Credit / debit card</strong><small>Visa, Mastercard, JCB</small></span></label>
+            <label class="choice"><input type="radio" name="payment" value="promptpay"><span><strong>PromptPay QR</strong><small>Scan with any Thai banking app</small></span></label>
+            <label class="choice"><input type="radio" name="payment" value="transfer"><span><strong>Bank transfer</strong><small>Transfer, then upload your slip</small></span></label>
+          </div>
+
+          <div class="pay-panel" id="pay-card">
+            <div class="field-grid">
+              <label class="span-2">Card number
+                <input type="text" id="card-number" inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456" maxlength="23">
+              </label>
+              <label class="span-2">Name on card
+                <input type="text" id="card-name" autocomplete="cc-name" placeholder="As shown on card">
+              </label>
+              <label>Expiry (MM/YY)
+                <input type="text" id="card-expiry" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5">
+              </label>
+              <label>CVV
+                <input type="password" id="card-cvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4">
+              </label>
+            </div>
+          </div>
+
+          <div class="pay-panel" id="pay-promptpay" hidden>
+            <div class="qr-box">
+              <div class="qr-head">PromptPay</div>
+              <div class="qr-code" id="qr-code" role="img" aria-label="PromptPay QR code"></div>
+              <p class="qr-amount" id="qr-amount"></p>
+              <p class="qr-meta">Pay to <strong id="qr-name"></strong><br>PromptPay ID <span id="qr-id"></span></p>
+            </div>
+            <p class="pay-hint">Open your banking app, scan this QR and pay the exact amount shown. The amount updates when you change your booking.</p>
+          </div>
+
+          <div class="pay-panel" id="pay-transfer" hidden>
+            <dl class="bank-info">
+              <dt>Bank</dt><dd id="bank-name"></dd>
+              <dt>Account number</dt>
+              <dd><span id="bank-account"></span> <button type="button" class="copy-btn" id="copy-account">Copy</button></dd>
+              <dt>Account name</dt><dd id="bank-holder"></dd>
+              <dt>Amount</dt><dd id="bank-amount" class="bank-amount"></dd>
+            </dl>
+            <label class="upload" id="slip-drop">
+              <input type="file" id="slip-input" accept="image/*">
+              <span class="upload-text" id="slip-text"><strong>Upload payment slip</strong><small>JPG or PNG, up to 10 MB</small></span>
+              <img id="slip-preview" alt="Slip preview" hidden>
+            </label>
           </div>
         </fieldset>
 
@@ -162,6 +204,7 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

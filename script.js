@@ -81,6 +81,16 @@ var SERVICES = {
   }
 };
 var HOME_FEE = 300;
+
+// ===== Payment details — replace with your real details before going live =====
+var PAYMENT = {
+  promptpayId: '0000000000',          // mobile number (10 digits) or tax / national ID (13 digits)
+  promptpayName: 'BeautiNear',
+  bankName: 'Kasikorn Bank (KBank)',
+  bankAccount: '000-0-00000-0',
+  bankHolder: 'BeautiNear Co., Ltd.'
+};
+var PAYMENT_LABELS = { card: 'Credit / debit card', promptpay: 'PromptPay QR', transfer: 'Bank transfer' };
 var TIMES = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 
 var modal = document.getElementById('modal');
@@ -135,6 +145,7 @@ function openBooking(key) {
   form.querySelector('input[name="location"][value="studio"]').checked = true;
   form.querySelector('input[name="payment"]').checked = true;
   errorEl.textContent = '';
+  resetPayment();
 
   form.hidden = false;
   summary.hidden = true;
@@ -175,12 +186,31 @@ form.addEventListener('submit', function (e) {
     return;
   }
 
-  var option = current.options[+form.querySelector('input[name="option"]:checked').value];
-  var artist = current.artists[+form.querySelector('input[name="artist"]:checked').value];
-  var location = form.querySelector('input[name="location"]:checked').value;
-  var payment = form.querySelector('input[name="payment"]:checked').value;
-  var homeFee = location === 'home' ? HOME_FEE : 0;
-  var total = option.price + artist.extra + homeFee;
+  var payment = selectedPayment();
+  if (payment === 'card') {
+    var cardError = validateCard();
+    if (cardError) {
+      errorEl.textContent = cardError[0];
+      cardError[1].focus();
+      return;
+    }
+  }
+  if (payment === 'transfer' && !slipFile) {
+    errorEl.textContent = 'Please upload your payment slip.';
+    slipInput.focus();
+    return;
+  }
+
+  var b = bookingTotal();
+  var option = b.option;
+  var artist = b.artist;
+  var location = b.location;
+  var homeFee = b.homeFee;
+  var total = b.total;
+
+  var paymentText = PAYMENT_LABELS[payment];
+  if (payment === 'card') paymentText += ' •••• ' + cardDigits().slice(-4);
+  if (payment === 'transfer') paymentText += ' (slip: ' + slipFile.name + ')';
 
   var d = new Date(dateInput.value + 'T00:00:00');
   var dateText = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
@@ -192,7 +222,7 @@ form.addEventListener('submit', function (e) {
     ['Date', dateText],
     ['Time', timeSelect.value],
     ['Location', location === 'home' ? 'Home visit' : 'At the studio'],
-    ['Payment', payment]
+    ['Payment', paymentText]
   ];
   if (artist.extra) rows.splice(3, 0, ['Senior artist fee', baht(artist.extra)]);
   if (homeFee) rows.push(['Home visit fee', baht(homeFee)]);
@@ -207,4 +237,183 @@ form.addEventListener('submit', function (e) {
   summary.hidden = false;
   modal.querySelector('.modal').scrollTop = 0;
   document.getElementById('done-btn').focus();
+});
+
+// ===== Payment methods =====
+var slipInput = document.getElementById('slip-input');
+var slipPreview = document.getElementById('slip-preview');
+var slipText = document.getElementById('slip-text');
+var cardNumber = document.getElementById('card-number');
+var cardName = document.getElementById('card-name');
+var cardExpiry = document.getElementById('card-expiry');
+var cardCvv = document.getElementById('card-cvv');
+var slipFile = null;
+var SLIP_MAX_BYTES = 10 * 1024 * 1024;
+
+document.getElementById('qr-name').textContent = PAYMENT.promptpayName;
+document.getElementById('qr-id').textContent = PAYMENT.promptpayId;
+document.getElementById('bank-name').textContent = PAYMENT.bankName;
+document.getElementById('bank-account').textContent = PAYMENT.bankAccount;
+document.getElementById('bank-holder').textContent = PAYMENT.bankHolder;
+
+function selectedPayment() {
+  return form.querySelector('input[name="payment"]:checked').value;
+}
+
+function bookingTotal() {
+  var option = current.options[+form.querySelector('input[name="option"]:checked').value];
+  var artist = current.artists[+form.querySelector('input[name="artist"]:checked').value];
+  var location = form.querySelector('input[name="location"]:checked').value;
+  var homeFee = location === 'home' ? HOME_FEE : 0;
+  return { option: option, artist: artist, location: location, homeFee: homeFee, total: option.price + artist.extra + homeFee };
+}
+
+// PromptPay payload (EMVCo / Thai QR standard)
+function tlv(id, value) {
+  return id + String(value.length).padStart(2, '0') + value;
+}
+
+function crc16(s) {
+  var crc = 0xFFFF;
+  for (var i = 0; i < s.length; i++) {
+    crc ^= s.charCodeAt(i) << 8;
+    for (var j = 0; j < 8; j++) {
+      crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+    crc &= 0xFFFF;
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function promptpayPayload(id, amount) {
+  var digits = id.replace(/\D/g, '');
+  var target = digits.length >= 13
+    ? tlv('02', digits)                                          // tax / national ID
+    : tlv('01', ('0000000000000' + '66' + digits.replace(/^0/, '')).slice(-13)); // mobile number
+  var payload =
+    tlv('00', '01') +
+    tlv('01', amount ? '12' : '11') +
+    tlv('29', tlv('00', 'A000000677010111') + target) +
+    tlv('53', '764') +
+    (amount ? tlv('54', amount.toFixed(2)) : '') +
+    tlv('58', 'TH') +
+    '6304';
+  return payload + crc16(payload);
+}
+
+function renderPaymentAmount() {
+  if (!current) return;
+  var total = bookingTotal().total;
+  document.getElementById('qr-amount').textContent = baht(total);
+  document.getElementById('bank-amount').textContent = baht(total);
+
+  var box = document.getElementById('qr-code');
+  if (typeof qrcode !== 'function') {
+    box.textContent = 'QR code could not load. Please check your connection.';
+    return;
+  }
+  var qr = qrcode(0, 'M');
+  qr.addData(promptpayPayload(PAYMENT.promptpayId, total));
+  qr.make();
+  box.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+}
+
+function showPaymentPanel() {
+  var method = selectedPayment();
+  ['card', 'promptpay', 'transfer'].forEach(function (m) {
+    document.getElementById('pay-' + m).hidden = m !== method;
+  });
+  errorEl.textContent = '';
+}
+
+function clearSlip() {
+  slipFile = null;
+  slipInput.value = '';
+  if (slipPreview.src) URL.revokeObjectURL(slipPreview.src);
+  slipPreview.removeAttribute('src');
+  slipPreview.hidden = true;
+  slipText.innerHTML = '<strong>Upload payment slip</strong><small>JPG or PNG, up to 10 MB</small>';
+}
+
+function resetPayment() {
+  cardNumber.value = cardName.value = cardExpiry.value = cardCvv.value = '';
+  clearSlip();
+  showPaymentPanel();
+  renderPaymentAmount();
+}
+
+form.addEventListener('change', function (e) {
+  if (e.target.name === 'payment') showPaymentPanel();
+  if (['option', 'artist', 'location'].indexOf(e.target.name) !== -1) renderPaymentAmount();
+});
+
+// Card input
+function cardDigits() {
+  return cardNumber.value.replace(/\D/g, '');
+}
+
+function luhn(num) {
+  var sum = 0;
+  for (var i = 0; i < num.length; i++) {
+    var d = +num[num.length - 1 - i];
+    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+
+cardNumber.addEventListener('input', function () {
+  cardNumber.value = cardDigits().slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ');
+});
+cardExpiry.addEventListener('input', function (e) {
+  var d = cardExpiry.value.replace(/\D/g, '').slice(0, 4);
+  cardExpiry.value = d.length > 2 || (d.length === 2 && e.inputType !== 'deleteContentBackward') ? d.slice(0, 2) + '/' + d.slice(2) : d;
+});
+cardCvv.addEventListener('input', function () {
+  cardCvv.value = cardCvv.value.replace(/\D/g, '').slice(0, 4);
+});
+
+function validateCard() {
+  var num = cardDigits();
+  if (num.length < 13 || !luhn(num)) return ['Please enter a valid card number.', cardNumber];
+  if (!cardName.value.trim()) return ['Please enter the name on the card.', cardName];
+  var m = cardExpiry.value.match(/^(\d{2})\/(\d{2})$/);
+  if (!m || +m[1] < 1 || +m[1] > 12) return ['Please enter the expiry date as MM/YY.', cardExpiry];
+  var now = new Date();
+  var expEnd = new Date(2000 + +m[2], +m[1], 1); // first day after the expiry month
+  if (expEnd <= now) return ['This card has expired.', cardExpiry];
+  if (!/^\d{3,4}$/.test(cardCvv.value)) return ['Please enter the 3 or 4 digit CVV.', cardCvv];
+  return null;
+}
+
+// Bank transfer
+document.getElementById('copy-account').addEventListener('click', function () {
+  var btn = this;
+  var text = PAYMENT.bankAccount.replace(/\D/g, '');
+  var done = function () {
+    btn.textContent = 'Copied';
+    setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+  };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+});
+
+slipInput.addEventListener('change', function () {
+  var file = slipInput.files[0];
+  if (!file) return;
+  if (!/^image\//.test(file.type)) {
+    clearSlip();
+    errorEl.textContent = 'Please upload an image file (JPG or PNG).';
+    return;
+  }
+  if (file.size > SLIP_MAX_BYTES) {
+    clearSlip();
+    errorEl.textContent = 'The slip image must be 10 MB or smaller.';
+    return;
+  }
+  if (slipPreview.src) URL.revokeObjectURL(slipPreview.src);
+  slipFile = file;
+  slipPreview.src = URL.createObjectURL(file);
+  slipPreview.hidden = false;
+  slipText.innerHTML = '<strong>' + escapeHtml(file.name) + '</strong><small>Tap to change slip</small>';
+  errorEl.textContent = '';
 });

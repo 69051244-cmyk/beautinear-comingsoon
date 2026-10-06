@@ -189,14 +189,7 @@ form.addEventListener('submit', function (e) {
   }
 
   var payment = selectedPayment();
-  if (payment === 'card') {
-    var cardError = validateCard();
-    if (cardError) {
-      errorEl.textContent = cardError[0];
-      cardError[1].focus();
-      return;
-    }
-  }
+  // Demo: card payments always succeed, whatever is typed in.
   if (payment === 'transfer' && !slipFile) {
     errorEl.textContent = 'Please upload your payment slip.';
     slipInput.focus();
@@ -221,7 +214,7 @@ function showReceipt(payment) {
   var total = b.total;
 
   var paymentText = PAYMENT_LABELS[payment];
-  if (payment === 'card') paymentText += ' •••• ' + cardDigits().slice(-4);
+  if (payment === 'card' && cardDigits()) paymentText += ' •••• ' + cardDigits().slice(-4);
   if (payment === 'transfer') paymentText += ' (slip: ' + slipFile.name + ')';
 
   var d = new Date(dateInput.value + 'T00:00:00');
@@ -392,18 +385,6 @@ cardCvv.addEventListener('input', function () {
   cardCvv.value = cardCvv.value.replace(/\D/g, '').slice(0, 3);
 });
 
-function validateCard() {
-  var num = cardDigits();
-  if (num.length !== 16) return ['Card number must be 16 digits.', cardNumber];
-  if (!cardName.value.trim()) return ['Please enter the name on the card.', cardName];
-  var m = cardExpiry.value.match(/^(\d{2})\/(\d{2})$/);
-  if (!m || +m[1] < 1 || +m[1] > 12) return ['Please enter the expiry date as MM/YY.', cardExpiry];
-  var now = new Date();
-  var expEnd = new Date(2000 + +m[2], +m[1], 1); // first day after the expiry month
-  if (expEnd <= now) return ['This card has expired.', cardExpiry];
-  if (!/^\d{3}$/.test(cardCvv.value)) return ['Please enter the 3 digit CVV.', cardCvv];
-  return null;
-}
 
 // Bank transfer
 document.getElementById('copy-account').addEventListener('click', function () {

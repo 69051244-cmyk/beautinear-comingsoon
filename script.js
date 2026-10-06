@@ -363,7 +363,7 @@ function luhn(num) {
 }
 
 cardNumber.addEventListener('input', function () {
-  cardNumber.value = cardDigits().slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ');
+  cardNumber.value = cardDigits().slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
 });
 cardExpiry.addEventListener('input', function (e) {
   var d = cardExpiry.value.replace(/\D/g, '').slice(0, 4);
@@ -375,7 +375,8 @@ cardCvv.addEventListener('input', function () {
 
 function validateCard() {
   var num = cardDigits();
-  if (num.length < 13 || !luhn(num)) return ['Please enter a valid card number.', cardNumber];
+  if (num.length !== 16) return ['Card number must be 16 digits.', cardNumber];
+  if (!luhn(num)) return ['Please enter a valid card number.', cardNumber];
   if (!cardName.value.trim()) return ['Please enter the name on the card.', cardName];
   var m = cardExpiry.value.match(/^(\d{2})\/(\d{2})$/);
   if (!m || +m[1] < 1 || +m[1] > 12) return ['Please enter the expiry date as MM/YY.', cardExpiry];

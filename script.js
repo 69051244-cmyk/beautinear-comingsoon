@@ -156,6 +156,8 @@ function openBooking(key) {
 }
 
 function closeBooking() {
+  payToken++;
+  setPaying(false);
   modal.hidden = true;
   document.body.classList.remove('modal-open');
   if (lastTrigger) lastTrigger.focus();
@@ -201,6 +203,16 @@ form.addEventListener('submit', function (e) {
     return;
   }
 
+  var token = ++payToken;
+  setPaying(true);
+  setTimeout(function () {
+    if (token !== payToken) return; // modal was closed while processing
+    setPaying(false);
+    showReceipt(payment);
+  }, PAY_DELAY_MS);
+});
+
+function showReceipt(payment) {
   var b = bookingTotal();
   var option = b.option;
   var artist = b.artist;
@@ -222,7 +234,8 @@ form.addEventListener('submit', function (e) {
     ['Date', dateText],
     ['Time', timeSelect.value],
     ['Location', location === 'home' ? 'Home visit' : 'At the studio'],
-    ['Payment', paymentText]
+    ['Payment', paymentText],
+    ['Transaction ID', 'BN' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 90 + 10)]
   ];
   if (artist.extra) rows.splice(3, 0, ['Senior artist fee', baht(artist.extra)]);
   if (homeFee) rows.push(['Home visit fee', baht(homeFee)]);
@@ -232,12 +245,12 @@ form.addEventListener('submit', function (e) {
   }).join('');
   document.getElementById('summary-total').textContent = baht(total);
 
-  document.getElementById('modal-title').textContent = 'Booking summary';
+  document.getElementById('modal-title').textContent = 'Payment successful';
   form.hidden = true;
   summary.hidden = false;
   modal.querySelector('.modal').scrollTop = 0;
   document.getElementById('done-btn').focus();
-});
+}
 
 // ===== Payment methods =====
 var slipInput = document.getElementById('slip-input');
@@ -249,6 +262,21 @@ var cardExpiry = document.getElementById('card-expiry');
 var cardCvv = document.getElementById('card-cvv');
 var slipFile = null;
 var SLIP_MAX_BYTES = 10 * 1024 * 1024;
+var PAY_DELAY_MS = 2000;
+var payBtn = document.getElementById('pay-btn');
+var payToken = 0;
+
+function setPaying(on) {
+  payBtn.disabled = on;
+  payBtn.classList.toggle('is-loading', on);
+  form.querySelectorAll('fieldset').forEach(function (f) { f.disabled = on; });
+  if (on) {
+    payBtn.textContent = 'Processing payment…';
+    errorEl.textContent = '';
+  } else if (current) {
+    payBtn.textContent = 'Pay ' + baht(bookingTotal().total);
+  }
+}
 
 document.getElementById('qr-name').textContent = PAYMENT.promptpayName;
 document.getElementById('qr-id').textContent = PAYMENT.promptpayId;
@@ -306,6 +334,7 @@ function renderPaymentAmount() {
   var total = bookingTotal().total;
   document.getElementById('qr-amount').textContent = baht(total);
   document.getElementById('bank-amount').textContent = baht(total);
+  payBtn.textContent = 'Pay ' + baht(total);
 
   var box = document.getElementById('qr-code');
   if (typeof qrcode !== 'function') {
@@ -352,16 +381,6 @@ function cardDigits() {
   return cardNumber.value.replace(/\D/g, '');
 }
 
-function luhn(num) {
-  var sum = 0;
-  for (var i = 0; i < num.length; i++) {
-    var d = +num[num.length - 1 - i];
-    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
-    sum += d;
-  }
-  return sum % 10 === 0;
-}
-
 cardNumber.addEventListener('input', function () {
   cardNumber.value = cardDigits().slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
 });
@@ -370,20 +389,19 @@ cardExpiry.addEventListener('input', function (e) {
   cardExpiry.value = d.length > 2 || (d.length === 2 && e.inputType !== 'deleteContentBackward') ? d.slice(0, 2) + '/' + d.slice(2) : d;
 });
 cardCvv.addEventListener('input', function () {
-  cardCvv.value = cardCvv.value.replace(/\D/g, '').slice(0, 4);
+  cardCvv.value = cardCvv.value.replace(/\D/g, '').slice(0, 3);
 });
 
 function validateCard() {
   var num = cardDigits();
   if (num.length !== 16) return ['Card number must be 16 digits.', cardNumber];
-  if (!luhn(num)) return ['Please enter a valid card number.', cardNumber];
   if (!cardName.value.trim()) return ['Please enter the name on the card.', cardName];
   var m = cardExpiry.value.match(/^(\d{2})\/(\d{2})$/);
   if (!m || +m[1] < 1 || +m[1] > 12) return ['Please enter the expiry date as MM/YY.', cardExpiry];
   var now = new Date();
   var expEnd = new Date(2000 + +m[2], +m[1], 1); // first day after the expiry month
   if (expEnd <= now) return ['This card has expired.', cardExpiry];
-  if (!/^\d{3,4}$/.test(cardCvv.value)) return ['Please enter the 3 or 4 digit CVV.', cardCvv];
+  if (!/^\d{3}$/.test(cardCvv.value)) return ['Please enter the 3 digit CVV.', cardCvv];
   return null;
 }
 
